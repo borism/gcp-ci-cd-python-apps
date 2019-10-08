@@ -1,7 +1,7 @@
 # **Continuous Delivery of Notejam Python-Flask application to Google Cloud Platform**
 
-This README describes how to create a continuous delivery pipeline of [notejam app](https://github.com/komarserjio/notejam), 
-specifically Python-Flask implementation, to Google Cloud Platform using **Google Kubernetes Engine**, 
+This README describes how to create a continuous delivery pipeline of [Notejam](https://github.com/komarserjio/notejam) 
+app, specifically Python-Flask implementation, to Google Cloud Platform using **Google Kubernetes Engine**, 
 **Cloud Source Repositories**, **Cloud Build**, **Resource Manager**, **Stackdriver**, and **Spinnaker**.
 
 #### **Application Flow Diagram**
@@ -53,13 +53,14 @@ To achieve all of the above, the following steps need to be performed:
 #### **Prerequisites**
 
 Before you begin, make sure you have the followings created:
-- Go to [Manage Resources](https://console.cloud.google.com/cloud-resource-manager) and create or choose your 
-project;
-- enable [billing](https://cloud.google.com/billing/docs/how-to/modify-project) for that project;
-- [Enable](https://console.cloud.google.com/flows/enableapi?apiid=sqladmin,container,cloudresourcemanager.googleapis.com,cloudbuild.googleapis.com
-) the Cloud SQL Admin, Kubernetes Engine, Cloud Resource Manager and Cloud Build APIs;
 
-#### **Set up the environemnt**
+- Go to [Manage Resources](https://console.cloud.google.com/cloud-resource-manager) and create or choose an existing 
+project;
+- enable project [billing](https://cloud.google.com/billing/docs/how-to/modify-project);
+- [Enable](https://console.cloud.google.com/flows/enableapi?apiid=sqladmin,container,cloudresourcemanager.googleapis.com,cloudbuild.googleapis.com
+) Cloud SQL Admin, Kubernetes Engine, Cloud Resource Manager and Cloud Build APIs;
+
+#### **Set up the environment**
 
 Open [Google Cloud Shell](https://console.cloud.google.com/?cloudshell=true) or your local shell if you have Google
  Cloud, Kubernetes and Helm CLI tools installed.
