@@ -1,21 +1,23 @@
 # **Continuous Delivery of Notejam Python-Flask application to Google Cloud Platform**
 
-This is the description of how to create a continuous delivery pipeline of the [notejam app](https://github.com/komarserjio/notejam), specifically the python flask implementation, onto Google Cloud Platform using **Google Kubernetes Engine**, **Cloud Source Repositories**, **Cloud Build**, **Resource Manager**, **Stackdriver**, and **Spinnaker**.
+This README describes how to create a continuous delivery pipeline of [notejam app](https://github.com/komarserjio/notejam), 
+specifically Python-Flask implementation, to Google Cloud Platform using **Google Kubernetes Engine**, 
+**Cloud Source Repositories**, **Cloud Build**, **Resource Manager**, **Stackdriver**, and **Spinnaker**.
 
 #### **Application Flow Diagram**
 
 ![Application Flow Architecture](images/AppFlow.png)
 
-Users will hit a DNS entry, i.e. notejam.example.com, that will resolve to a Cloud Load Balancer, created using a 
-Kubernetes construct. That Load Balancer will distribute traffic to appropriate pods.
+End-user will enter app's external domain name, eg. notejam.example.com, that should resolve to a Cloud Load Balancer's 
+external IP. Load Balancer will then direct traffic to appropriate Kubernetes pod that has production application 
+running on it, which in turn will talk to MySQL RDBMS database cluster if needed to retrieve persistent data required by
+app.
 
-Those pods will have the application running, that will talk to a MySQL database to retrieve required data.
+MySQL database is running on Highly Available Cloud SQL instance with fail-over replica, which does both binary data 
+logging for Point-in-Time Restore as well as automatic nightly backup.
 
-MySQL database is using a Highly Available Cloud SQL instance with a FailOver replica. There's also set up an automatic 
-daily backup.
-
-All logs from all application pods, cloud builder and mysql are easily available in Stackdriver for search, reporting, 
-audit or other purposes.
+All app logs from application pods, cloud builder and MySQL DB are easily available in Stackdriver for debugging, 
+reporting, audit or other purposes.
 
 #### **Pipeline Architecture**
 ****
@@ -23,34 +25,35 @@ audit or other purposes.
 ![Pipeline Architecture](images/DeployFlow.png)
 
 
-To continuously deliver the notejam application the proposed flow is:
-- the developer changes application code;
-- then the developer creates a git tag and pushes it to repository;
-- Cloud Build detects that new tag and starts building a docker image;
-- once that docker image is built, it is started and unit tests are run;
-- if unit tests pass, the docker image is published to docker image registry;
-- Spinnaker detects the new image and starts the pipeline;
-- pipeline first deploys the application to a Development environment;
-- once the application is deployed, a functional test of the application is performed;
-- after functional tests pass, there's a need for a manual approval to push the changes to production;
-- after the manual approval, the application is deployed to production environment and available to public internet
- users.
+To continuously deliver the Notejam Flask application the implemented flow is:
+- software developers change application code in their feature branches;
+- developers push, review and merge feature branches to master branch;
+- developers or release manager create new app release by git tagging and pushing it to repository;
+- Cloud Build detects new tag in the repository and starts building a test docker image;
+- once docker image is built, it is started and app's unit tests are run;
+- if unit tests pass, the docker image is published to GCP Docker Image Registry;
+- Spinnaker detects new Docker image and starts the pipeline;
+- pipeline first deploys new application version to a Staging environment;
+- once new version is deployed to Staging a functional test of the application is performed;
+- after functional tests pass QA there's a manual approval in Spinnaker by release manager to push new release to prod;
+- after manual approval has been received, the application is deployed to production and becomes available to end-users.
 
-To achieve all the above, the following steps need to be performed:
-- launch [Cloud Shell](https://cloud.google.com/shell/);
-- create a Google Kubernetes Engine cluster;
-- configure users and identity for Spinnaker;
-- create a MySQL instance;
+To achieve all of the above, the following steps need to be performed:
+- open [Google Cloud Console](https://console.cloud.google.com);
+- create new project
+- create new Google Kubernetes Engine cluster;
+- configure users and identity for running Spinnaker in GKE;
+- create MySQL cluster;
 - configure users and identity for MySQL;
-- create a git repo and upload your application there;
-- create triggers to build your docker image once the application code changes;
-- configure Spinnaker to deploy your application to GKE;
+- create new git repo in Google Cloud Code Repositories and push your application there;
+- create triggers to build new Docker image once the repository changes;
+- configure Spinnaker to deploy new version of the application to GKE;
 
 
 #### **Prerequisites**
 
 Before you begin, make sure you have the followings created:
-- Go to [Manage Resources](https://console.cloud.google.com/cloud-resource-manager) page and create or choose your 
+- Go to [Manage Resources](https://console.cloud.google.com/cloud-resource-manager) and create or choose your 
 project;
 - enable [billing](https://cloud.google.com/billing/docs/how-to/modify-project) for that project;
 - [Enable](https://console.cloud.google.com/flows/enableapi?apiid=sqladmin,container,cloudresourcemanager.googleapis.com,cloudbuild.googleapis.com
@@ -58,7 +61,8 @@ project;
 
 #### **Set up the environemnt**
 
-Open [Google Cloud Shell](https://console.cloud.google.com/?cloudshell=true)
+Open [Google Cloud Shell](https://console.cloud.google.com/?cloudshell=true) or your local shell if you have Google
+ Cloud, Kubernetes and Helm CLI tools installed.
 
 Set the compute zone preference and the project name:
 ```
@@ -205,27 +209,11 @@ it to Container Registry.
 
 ##### **Creating the Source code repository**
 
-Dowload the source code from this repo:
+Download and extract app source code:
 ```
-curl -LO https://github.com/roma-d/google-cloud-platform-ci-cd-python-app/archive/master.zip
-```
-
-Unpack it:
-```
+curl -LO https://github.com/borism/gcp-ci-cd-python-apps/archive/master.zip
 unzip master.zip
-```
-
-Change the direcotory to source code:
-```
-cd google-cloud-platform-ci-cd-python-app-master/
-```
-
-Set the username and email address for your Git commits in this repository. Replace `[EMAIL_ADDRESS]` with your Git 
-email address, and replace `[USERNAME]` with your Git username.
-
-```
-git config --global user.email "[EMAIL_ADDRESS]"
-git config --global user.name "[USERNAME]"
+cd gcp-ci-cd-python-apps/
 ```
 
 Make the initial commit to your source code repository:
@@ -233,10 +221,10 @@ Make the initial commit to your source code repository:
 ```
 git init
 git add .
-git commit -m "Initial commit"
+git commit -m "initial commit"
 ```
 
-Create a repository to host your code:
+Create new repository on Google Cloud Source to host app code:
 ```
 gcloud source repos create notejam-flask
 git config --global credential.https://source.developers.google.com.helper gcloud.sh
@@ -291,9 +279,9 @@ git push --tags
 - in **Container Registry**, click [Build History](https://console.cloud.google.com/gcr/builds) to check that the build 
 has been triggered.
 
-#### **Configure the MySQL instance with Cloud SQL**
+#### **Configure MySQL instance with Cloud SQL**
 
-Our app uses a MySQL database. To connect to our MySQL database, Google Cloud Platform provides [CloudSQL proxy](https://cloud.google.com/sql/docs/mysql/sql-proxy) 
+Our app uses a MySQL database. To connect to MySQL database, Google Cloud Platform provides [CloudSQL proxy](https://cloud.google.com/sql/docs/mysql/sql-proxy) 
 sidecar container. To use it, you need to add that container to your registry, so your pipeline can fetch it. Run the 
 following command in **Cloud Shell**:
 ```
@@ -407,7 +395,7 @@ kubectl create secret generic cloudsql-instance-credentials \
 --from-file=credentials.json=./mysql-key.json
 ```
 
-Now Create the secrets that will be used in the application, the usernamea and the password to connect to the database:
+Now Create the secrets that will be used in the application, the username and the password to connect to the database:
 
 ```
 kubectl create secret generic cloudsql-db-credentials \
@@ -431,8 +419,8 @@ Make sure the applicaiton name is `notejam`, because this is the name set in the
 
 ##### **Create service load balancers**
 
-To avoid having to enter the information manually in the UI, use the Kubernetes command-line interface to create load 
-balancers for your services. Alternatively, you can perform this operation in the Spinnaker UI.
+To avoid having to enter the information manually in the UI, use the Kubernetes command-line interface to create 
+load-balancers for your services. Alternatively, you can perform this operation in the Spinnaker UI.
 
 In Cloud Shell, run the following command from the source code directory:
 ```
@@ -447,7 +435,7 @@ export PROJECT=$(gcloud info --format='value(config.project)')
 export CONNECTION_NAME=$(gcloud sql instances describe $DB_INSTANCE_NAME --format='value(connectionName)')
 sed s/PROJECT/$PROJECT/g spinnaker/pipeline-deploy.json | sed s/CONNECTION_NAME/$CONNECTION_NAME/g | curl -d@- -X POST --header "Content-Type: application/json" --header "Accept: /" http://localhost:8080/gate/pipelines
 ```
-If everything is fine, you should see your pipeline in Spinnaker UI, if you click on Configre, it should look like this:
+If everything is fine, you should see your pipeline in Spinnaker UI. If you click Configure, it should look like this:
 
 ![Pipeline Spinnaker UI](images/SpinnakerUI.png)
 
@@ -459,15 +447,15 @@ Now, if you push a new tag to your git repository, it will do the followings:
 - it will deploy it to dev environment and test basic application functionality;
 - once test passes it will wait for manual approval to deploy to prod.
 
-Once it is depoyed to prod, you should be able to see the app, get it's public IP address with the following command:
+Once it is deployed to prod, you should be able to see the app, get it's public IP address with the following command:
 ```
 export PUBLIC_IP=$(kubectl get service notejam-prod -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 echo $PUBLIC_IP
 12.34.45.56
 ```
 
-Put that IP address in your browser and you should see the working app. Normally that IP address would be associated 
-with a DNS name, i.e. notejam.example.com.
+Enter that IP address in your browser and you should see the working app. Normally IP address would be associated 
+with a DNS A record, i.e. notejam.example.com.
 
-That's it. Once you change something in the app and push a new tag, it will automatically be deployed until production, 
-and with a manual approve, to production.
+That's it. Once you change something in the app source code repository and push a new tag, it will automatically be 
+deployed to staging, and with a manual approve, to production.
