@@ -1,8 +1,22 @@
 # **Continuous Delivery of Notejam Python-Flask application to Google Cloud Platform**
 
-This README describes how to create a continuous delivery pipeline of [Notejam](https://github.com/komarserjio/notejam) 
-app, specifically Python-Flask implementation, to Google Cloud Platform using **Google Kubernetes Engine**, 
+This README describes how to create a continuous delivery pipeline for [Notejam](https://github.com/komarserjio/notejam) 
+app, specifically Python-Flask implementation, to Google Cloud Platform using **Kubernetes Engine**, 
 **Cloud Source Repositories**, **Cloud Build**, **Resource Manager**, **Stackdriver**, and **Spinnaker**.
+
+### TL;DR
+
+- install `gcloud`, `kubectl` and `helm` CLI tools
+- create new project in Google Cloud Console; enable Billing, Kubernetes and Cloud Build on it
+- run `./scripts/provision-k8s-cluster.sh <PROJECT_ID>`
+- run `./scripts/provision-mysql.sh` (set MySQL root password in Google Cloud SQL Console if CLI doesn't work)
+- run `./scripts/provision-spinnaker.sh`
+- run `gcloud sql connect <DB_INSTANCE_NAME> -u root --project <PROJECT_ID>` (supply MySQL root password)
+- run `MySQL [(none)]> source schema-tmp.sql;`
+- [create/clone source code repository to Cloud Source Repositories](#creating-the-source-code-repository)
+- [configure build triggers in Container Registry](#configure-build-triggers)
+- [configure Deployment Pipeline](#configure-deployment-pipeline)
+- push new code to repository, tag, review, approve to prod in Spinnaker and enjoy :) 
 
 #### **Application Flow Diagram**
 

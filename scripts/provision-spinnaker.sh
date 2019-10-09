@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-PROJECT=$(gcloud info \
-    --format='value(config.project)')
+GCP_REG="europe-north1"
+PROJECT=$(gcloud info --format='value(config.project)')
 BUCKET=$PROJECT-spinnaker-config
-gsutil mb -c regional -l europe-north1 gs://$BUCKET
+gsutil mb -c regional -l $GCP_REG gs://$BUCKET
 
 SA_EMAIL=$(gcloud iam service-accounts list \
     --filter="name:spinnaker-storage-account" \
     --format='value(email)')
 SA_JSON=$(cat spinnaker-sa.json)
-PROJECT=$(gcloud info --format='value(config.project)')
 BUCKET=$PROJECT-spinnaker-config
+
 cat > spinnaker-config.yaml <<EOF
 storageBucket: $BUCKET
 gcs:

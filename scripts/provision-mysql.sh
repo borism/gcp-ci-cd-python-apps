@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+GCP_REG="europe-north1"
 DB_INSTANCE_NAME="your_sql_instance_name_here"
 DB_NAME="your_database_name_here"
 DB_USER="your_database_user_here"
@@ -17,7 +18,7 @@ gcloud sql instances create $DB_INSTANCE_NAME \
 --failover-replica-name "$DB_INSTANCE_NAME-failover" \
 --enable-bin-log \
 --database-version=MYSQL_5_7 \
---region=europe-north1 \
+--region=$GCP_REG \
 --project $PROJECT
 
 gcloud sql users set-password root \
@@ -26,6 +27,7 @@ gcloud sql users set-password root \
 --password=$DB_ROOT_PASS \
 --project $PROJECT
 
+sed "s/DB_USER/$DB_USER/g" schema.sql | sed "s/DB_PASS/$DB_PASS/g" | sed "s/DB_NAME/$DB_NAME/g" > schema-tmp.sql
 
 CONNECTION_NAME=$(gcloud sql instances describe $DB_INSTANCE_NAME --format='value(connectionName)')
 
